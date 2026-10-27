@@ -2,8 +2,11 @@
 .env
 .env.*
 !.env.example
-library/
+# Default PDF library folder (root only; internal/library is source code)
+/library/
 *.pdf
+*.PDF
+.folio/
 node_modules/
 dist/
 bin/

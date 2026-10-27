@@ -1,0 +1,97 @@
+{{define "head"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/app.css">
+<script type="module" src="/static/vendor/datastar/datastar.js"></script>
+{{end}}
+
+{{define "library-page"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head"}}
+<title>Folio</title>
+<script type="module" src="/static/library.js"></script>
+</head>
+<body data-signals="{q: ''}">
+<header class="topbar">
+  <a class="brand" href="/">Folio</a>
+  <input id="search" class="search" type="search" placeholder="Filter by title or tag  ( / )" data-bind:q autocomplete="off">
+  <div class="actions">
+    <button class="btn" data-on:click="@post('/scan?filter={{urlquery .Filter}}')" data-indicator:_scanning data-attr:disabled="$_scanning">
+      <span data-show="!$_scanning">Rescan folder</span><span data-show="$_scanning" style="display:none">Scanning...</span>
+    </button>
+    <form class="upload" method="post" action="/upload" enctype="multipart/form-data">
+      <label class="btn">Upload PDFs
+        <input type="file" name="files" accept="application/pdf,.pdf" multiple hidden onchange="this.form.submit()">
+      </label>
+    </form>
+    <a class="btn" href="/notes.md" download>Export all notes</a>
+  </div>
+</header>
+{{template "library" .}}
+</body>
+</html>
+{{end}}
+
+{{define "library"}}
+<div id="library" class="library">
+  <nav class="shelves" aria-label="Tags">
+    <h2>Shelves</h2>
+    <ul>
+      <li><a href="/" {{if eq .Filter ""}}aria-current="page"{{end}}>All books <span class="count">{{.Total}}</span></a></li>
+      {{range .Tags}}
+      <li><a href="/?tag={{.Tag}}" {{if eq .Tag $.Filter}}aria-current="page"{{end}}>{{.Tag}} <span class="count">{{.Count}}</span></a></li>
+      {{end}}
+    </ul>
+    <p class="hint">Add a tag on any book to make a shelf.</p>
+  </nav>
+  <section class="shelf">
+    <div id="flash" class="flash" {{if not .Flash}}hidden{{end}}>{{.Flash}}</div>
+    {{if .Books}}
+    <div class="grid">
+      {{range .Books}}{{template "card" .}}{{end}}
+    </div>
+    {{else if .Filter}}
+    <p class="empty">No books on the "{{.Filter}}" shelf.</p>
+    {{else}}
+    <div class="empty">
+      <p>No PDFs yet.</p>
+      <p>Copy PDFs into your library folder and press <strong>Rescan folder</strong>, or use <strong>Upload PDFs</strong>.</p>
+      <p>Only add files you have the right to use.</p>
+    </div>
+    {{end}}
+    <datalist id="tag-list">{{range .Tags}}<option value="{{.Tag}}">{{end}}</datalist>
+  </section>
+</div>
+{{end}}
+
+{{define "card"}}
+<article id="book-{{.ID}}" class="card{{if .Missing}} missing{{end}}"
+  data-search="{{lower .Title}} {{lower .Path}} {{lower (join .Tags " ")}}"
+  data-show="!$q || el.dataset.search.includes($q.toLowerCase())">
+  <a class="cover" href="/read/{{.ID}}" title="{{.Path}}" id="cover-{{.ID}}" data-ignore-morph>
+    <span class="cover-title">{{.Title}}</span>
+    {{if not .Missing}}<canvas data-cover="/files/{{.ID}}"></canvas>{{end}}
+  </a>
+  <div class="meta">
+    <a class="title" href="/read/{{.ID}}">{{.Title}}</a>
+    {{if .Missing}}<p class="warn">File missing from library folder</p>{{end}}
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{pct .Progress}}">
+      <div class="bar" style="width: {{pct .Progress}}%"></div>
+    </div>
+    <p class="stats">
+      {{if .Pages}}p. {{.LastPage}} of {{.Pages}} · {{pct .Progress}}%{{else}}Not started{{end}}
+      <br>{{if .Opened}}Opened {{ago .LastOpened}}{{else}}Never opened{{end}} · {{size .Size}}
+    </p>
+    <ul class="tags">
+      {{range .Tags}}
+      <li class="tag"><a href="/?tag={{.}}">{{.}}</a><button type="button" title="Remove tag" aria-label="Remove tag {{.}}"
+        data-on:click="@delete('/books/{{$.ID}}/tags/{{pathesc .}}?filter={{urlquery $.Filter}}')">x</button></li>
+      {{end}}
+    </ul>
+    <form class="add-tag" data-on:submit__prevent="@post('/books/{{.ID}}/tags?filter={{urlquery .Filter}}', {contentType: 'form'})">
+      <input name="tag" placeholder="+ tag" list="tag-list" autocomplete="off" aria-label="Add tag to {{.Title}}">
+    </form>
+  </div>
+</article>
+{{end}}
