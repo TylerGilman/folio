@@ -1,0 +1,68 @@
+{{define "reader-page"}}<!doctype html>
+<html lang="en">
+<head>
+{{template "head"}}
+<title>{{.Title}} · Folio</title>
+<script type="module" src="/static/reader.js"></script>
+</head>
+<body class="reader-page">
+<header class="topbar reader-bar">
+  <a class="brand" href="/" title="Back to library (Esc)">Folio</a>
+  <h1 class="book-title" title="{{.Path}}">{{.Title}}</h1>
+  <div class="pager">
+    <button id="prev" class="btn" title="Previous page (Left, k)">Prev</button>
+    <form id="jump" class="jump">
+      <input id="page-input" type="number" min="1" value="{{.LastPage}}" aria-label="Page number" title="Jump to page (g)">
+      <span>of <span id="page-count">{{if .Pages}}{{.Pages}}{{else}}?{{end}}</span></span>
+    </form>
+    <button id="next" class="btn" title="Next page (Right, j)">Next</button>
+  </div>
+  <div class="zoom">
+    <button id="zoom-out" class="btn" title="Zoom out (-)">-</button>
+    <button id="zoom-fit" class="btn" title="Fit width (0)"><span id="zoom-label">Fit</span></button>
+    <button id="zoom-in" class="btn" title="Zoom in (+)">+</button>
+  </div>
+  <span id="save-state" class="save-state" aria-live="polite"></span>
+  <button id="toggle-notes" class="btn" title="Show or hide notes (Shift+N)">Notes</button>
+</header>
+<main class="reader">
+  <div id="viewer" class="viewer" tabindex="-1"
+       data-book="{{.ID}}" data-src="/files/{{.ID}}" data-page="{{.LastPage}}">
+    <canvas id="page-canvas"></canvas>
+    <p id="viewer-msg" class="viewer-msg">Loading...</p>
+  </div>
+  <aside id="notes-panel" class="notes-panel">
+    <form id="note-form" class="note-form"
+          data-on:submit__prevent="@post('/books/{{.ID}}/notes', {contentType: 'form'})">
+      <label for="note-body">Note on page <span id="note-page-label">{{.LastPage}}</span></label>
+      <input type="hidden" name="page" id="note-page" value="{{.LastPage}}">
+      <textarea id="note-body" name="body" rows="4" required placeholder="Write a note (n to focus, Ctrl+Enter to save)"
+        data-on:keydown="(evt.ctrlKey || evt.metaKey) && evt.key === 'Enter' && el.form.requestSubmit()"></textarea>
+      <div class="note-actions">
+        <button class="btn primary" type="submit">Add note</button>
+        <a class="btn" href="/books/{{.ID}}/notes.md" download>Export Markdown</a>
+      </div>
+      {{template "note-status" ""}}
+    </form>
+    {{template "notes" .}}
+  </aside>
+</main>
+</body>
+</html>
+{{end}}
+
+{{define "note-status"}}<p id="note-status" class="note-status" {{if not .}}hidden{{end}}>{{.}}</p>{{end}}
+
+{{define "notes"}}
+<ol id="notes" class="notes">
+  {{range .Notes}}
+  <li id="note-{{.ID}}" data-page="{{.Page}}">
+    <button type="button" class="goto" data-goto="{{.Page}}" title="Go to page {{.Page}}">p. {{.Page}}</button>
+    <div class="note-body">{{.Body}}</div>
+    <button type="button" class="del" title="Delete note" data-on:click="@delete('/notes/{{.ID}}')">Delete</button>
+  </li>
+  {{else}}
+  <li class="empty">No notes for this book yet.</li>
+  {{end}}
+</ol>
+{{end}}
