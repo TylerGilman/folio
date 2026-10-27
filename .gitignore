@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+library/
+*.pdf
+node_modules/
+dist/
+bin/
+.idea/
+.vscode/
